@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Tic-Tac-Toe Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .acrylic-container {
+            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            transition: transform 0.3s ease;
+        }
+        .acrylic-container:hover {
+            transform: scale(1.05);
+        }
+        .button-style {
+            background-color: #FF5500;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .button-style:hover {
+            background-color: #FF7733;
+        }
+        .button-disabled {
+            background-color: #4a4a4a;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-black via-gray-800 to-gray-900 text-gray-300 font-sans">
+    <header class="bg-gray-900 shadow-md sticky top-0 z-10">
+        <div class="container mx-auto px-6 lg:px-20 py-4 flex items-center justify-between">
+            <a href="#" class="text-2xl font-bold text-white">
+                <i class="fas fa-gamepad"></i> Ultimate Tic-Tac-Toe
+            </a>
+        </div>
+    </header>
+
+    <section id="game" class="py-12 bg-gradient-to-br from-gray-900 to-gray-800 shadow-md">
+        <div class="container mx-auto px-6 lg:px-20">
+            <div id="intro" class="flex justify-center items-center gap-4 text-center">
+                <button class="button-style" onclick="startSetup()">Start Game</button>
+            </div>
+
+            <!-- Player Setup -->
+            <div id="playerSetup" class="hidden">
+                <div id="playerNameInput">
+                    <p class="text-lg text-gray-300 mb-4">Enter your name:</p>
+                    <input type="text" id="player1Name" class="p-2 border border-gray-600 rounded text-white" placeholder="Player 1 Name">
+                    <button class="button-style mt-4" onclick="setPlayerNames()">Next</button>
+                </div>
+            </div>
+
+            <!-- Game Settings -->
+            <div id="gameSettings" class="hidden mt-6">
+                <select id="size" class="w-48 px-4 py-2 border border-gray-600 bg-gray-800 text-white rounded-lg mb-4">
+                    <option value="3">3x3</option>
+                    <option value="4">4x4</option>
+                    <option value="5">5x5</option>
+                </select>
+
+                <div class="text-gray-300 text-lg mb-4">Choose opponent:</div>
+                <button id="multiplayerBtn" class="button-style" onclick="setMode('multiplayer')">Multiplayer</button>
+                <button id="botBtn" class="button-style" onclick="setMode('bot')">Bot</button>
+
+                <div id="difficultySelect" class="hidden mt-4">
+                    <select id="difficulty" class="w-48 px-4 py-2 border border-gray-600 bg-gray-800 text-white rounded-lg">
+                        <option value="easy">Easy</option>
+                        <option value="normal">Normal</option>
+                        <option value="hard">Hard</option>
+                        <option value="superHard">Super Hard</option>
+                        <option value="impossible">Impossible</option>
+                    </select>
+                </div>
+
+                <button class="button-style mt-4" id="startGameBtn" onclick="startGame()">Start Game</button>
+            </div>
+
+            <!-- Card showing players -->
+            <div id="playerCard" class="hidden mb-4 text-center text-xl text-gray-100">
+                <span id="player1Label">KOU</span> vs <span id="player2Label">BOT</span>
+            </div>
+
+            <!-- Game Status -->
+            <div id="gameStatus" class="text-center mb-6">
+                <p id="turnStatus" class="text-lg text-gray-300">Your Turn</p>
+            </div>
+
+            <!-- Game Grid -->
+            <div id="board" class="grid grid-cols-3 gap-2 mt-8 max-w-[300px] mx-auto">
+                <!-- Cells will be dynamically generated here -->
+            </div>
+            <p id="message" class="mt-6 text-center text-lg text-gray-300 hidden">Game Over!</p>
+        </div>
+    </section>
+
+    <!-- Popup Modal -->
+    <div id="popup" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-gray-900 p-8 rounded-lg text-center text-white">
+            <p id="popupMessage" class="text-xl"></p>
+            <div class="mt-4 flex justify-center gap-4">
+                <button id="tryAgainBtn" class="button-style hidden" onclick="tryAgain()">Try Again</button>
+                <button id="continueBtn" class="button-style hidden" onclick="continueGame()">Continue</button>
+                <button id="closeBtn" class="button-style" onclick="closePopup()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let player1Name = '';
+        let player2Name = '';
+        let currentPlayer = 'X';
+        let board = [];
+        let gameOver = false;
+        let mode = 'player'; // 'player' or 'bot'
+        let gridSize = 3; // Default grid size 3x3
+        let difficulty = 'easy'; // Default difficulty
+        let turnStatus = document.getElementById('turnStatus');
+        let playerCard = document.getElementById('playerCard');
+        let player1Label = document.getElementById('player1Label');
+        let player2Label = document.getElementById('player2Label');
+        let boardDiv = document.getElementById('board');
+        let message = document.getElementById('message');
+    
+        // Function to start the game setup
+        function startSetup() {
+            document.getElementById('intro').classList.add('hidden');
+            document.getElementById('playerSetup').classList.remove('hidden');
+        }
+    
+        // Function to set player names after entering the name
+        function setPlayerNames() {
+            player1Name = document.getElementById('player1Name').value.trim();
+            if (player1Name === '') {
+                alert('Please enter your name.');
+                return;
+            }
+            player2Name = mode === 'bot' ? 'BOT' : prompt('Enter Player 2 Name:');
+            player1Label.textContent = player1Name;
+            player2Label.textContent = player2Name;
+    
+            document.getElementById('playerSetup').classList.add('hidden');
+            document.getElementById('gameSettings').classList.remove('hidden');
+        }
+    
+        // Function to set the game mode (multiplayer or bot)
+        function setMode(selectedMode) {
+            mode = selectedMode;
+            if (mode === 'bot') {
+                document.getElementById('difficultySelect').classList.remove('hidden');
+            } else {
+                document.getElementById('difficultySelect').classList.add('hidden');
+            }
+        }
+    
+        // Function to start the game
+        function startGame() {
+            gridSize = parseInt(document.getElementById('size').value);
+            difficulty = document.getElementById('difficulty') ? document.getElementById('difficulty').value : 'easy';
+    
+            // Initialize board
+            board = Array(gridSize).fill().map(() => Array(gridSize).fill(''));
+            currentPlayer = 'X';
+    
+            renderBoard();
+            gameOver = false;
+            message.classList.add('hidden');
+            playerCard.classList.remove('hidden');
+            turnStatus.textContent = `${player1Name}'s Turn`;
+    
+            document.getElementById('gameSettings').classList.add('hidden');
+        }
+    
+        // Function to render the board on the screen
+        function renderBoard() {
+            boardDiv.innerHTML = '';
+            boardDiv.classList.remove('grid-cols-3', 'grid-cols-4', 'grid-cols-5', 'grid-cols-6');
+            boardDiv.classList.add(`grid-cols-${gridSize}`);
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('acrylic-container', 'flex', 'items-center', 'justify-center', 'h-20', 'text-4xl', 'font-bold', 'cursor-pointer');
+                    cell.textContent = board[i][j];
+                    cell.addEventListener('click', () => makeMove(i, j));
+                    boardDiv.appendChild(cell);
+                }
+            }
+        }
+    
+        // Function to make a move
+        function makeMove(i, j) {
+            if (gameOver || board[i][j]) return;
+            board[i][j] = currentPlayer;
+            renderBoard();
+            if (checkWinner(currentPlayer)) {
+                gameOver = true;
+                setTimeout(() => {
+                    showPopup(`${currentPlayer === 'X' ? player1Name : player2Name} Wins!`, true);
+                }, 200);
+                return;
+            }
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            turnStatus.textContent = currentPlayer === 'X' ? `${player1Name}'s Turn` : `${player2Name}'s Turn`;
+    
+            if (mode === 'bot' && currentPlayer === 'O' && !gameOver) {
+                botMove();
+            }
+        }
+    
+        // Function to check the winner
+        function checkWinner(player) {
+            for (let i = 0; i < gridSize; i++) {
+                if (board[i].every(cell => cell === player)) return true;
+                if (board.map(row => row[i]).every(cell => cell === player)) return true;
+            }
+            if (board.map((row, idx) => row[idx]).every(cell => cell === player)) return true;
+            if (board.map((row, idx) => row[gridSize - idx - 1]).every(cell => cell === player)) return true;
+            return false;
+        }
+    
+        // Function to make bot move
+        function botMove() {
+            setTimeout(() => {
+                const bestMove = getBotMove();
+                board[bestMove[0]][bestMove[1]] = 'O';
+                renderBoard();
+                if (checkWinner('O')) {
+                    gameOver = true;
+                    showPopup('Bot Wins! Try Again.', false);
+                    return;
+                }
+                currentPlayer = 'X';
+                turnStatus.textContent = `${player1Name}'s Turn`;
+            }, 1000);
+        }
+    
+        // Function to calculate bot move based on difficulty
+        function getBotMove() {
+            const availableMoves = [];
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    if (!board[i][j]) availableMoves.push([i, j]);
+                }
+            }
+            
+            // Easy difficulty: random move
+            if (difficulty === 'easy') {
+                return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+            }
+            
+            // Normal difficulty: block winning moves or random
+            if (difficulty === 'normal') {
+                // Block player winning move or take center if possible
+                const center = Math.floor(gridSize / 2);
+                if (board[center][center] === '') return [center, center];
+                return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+            }
+            
+            // Hard difficulty: Try to win or block
+            if (difficulty === 'hard' || difficulty === 'superHard') {
+                return findBestMove();
+            }
+            
+            // Impossible difficulty: Best AI move
+            if (difficulty === 'impossible') {
+                return findBestMove();
+            }
+            
+            return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+        }
+    
+        // Function to find the best move for 'impossible' difficulty
+        function findBestMove() {
+            // Implement more sophisticated algorithm like Minimax for impossible difficulty
+            // Here we'll just return a random move for simplicity
+            const availableMoves = [];
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    if (!board[i][j]) availableMoves.push([i, j]);
+                }
+            }
+            return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+        }
+    
+        // Function to show popup (win or lose)
+        function showPopup(message, playerWon) {
+            document.getElementById('popupMessage').textContent = message;
+            document.getElementById('popup').classList.remove('hidden');
+            if (playerWon) {
+                document.getElementById('continueBtn').classList.remove('hidden');
+                document.getElementById('tryAgainBtn').classList.add('hidden');
+            } else {
+                document.getElementById('tryAgainBtn').classList.remove('hidden');
+                document.getElementById('continueBtn').classList.add('hidden');
+            }
+    
+            // Save score to localStorage
+            let scores = JSON.parse(localStorage.getItem('scores')) || {};
+            if (playerWon) {
+                const playerName = currentPlayer === 'X' ? player1Name : player2Name;
+                scores[playerName] = (scores[playerName] || 0) + 1;
+                localStorage.setItem('scores', JSON.stringify(scores));
+            }
+        }
+    
+        // Function for trying again after game over
+        function tryAgain() {
+            document.getElementById('popup').classList.add('hidden');
+            startGame();
+        }
+    
+        // Function to continue after a win
+        function continueGame() {
+            document.getElementById('popup').classList.add('hidden');
+            startGame();
+        }
+    
+        // Close popup
+        function closePopup() {
+            document.getElementById('popup').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>    
